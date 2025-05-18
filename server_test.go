@@ -12,6 +12,7 @@ import (
 )
 
 func TestJSON(t *testing.T) {
+	t.Parallel()
 
 	header := http.Header{}
 	headerKey := "Content-Type"
@@ -52,6 +53,8 @@ func TestJSON(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
+	t.Parallel()
+
 	makeStorage(t)
 	defer cleanupStorage(t)
 
