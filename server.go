@@ -17,7 +17,6 @@ type ErrorMessage struct {
 	Error string `json:"error"`
 }
 
-var data = map[string]string{}
 var storagePath = "/tmp"
 
 func main() {
@@ -83,6 +82,17 @@ func main() {
 }
 
 func Set(ctx context.Context, key, value string) error {
+	data, err := loadData(ctx)
+	if err != nil {
+		return err
+	}
+	data[key] = value
+
+	err = saveData(ctx, data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 func Get(ctx context.Context, key string) (string, error) {
@@ -94,6 +104,16 @@ func Get(ctx context.Context, key string) (string, error) {
 }
 
 func Delete(ctx context.Context, key string) error {
+	data, err := loadData(ctx)
+	if err != nil {
+		return err
+	}
+	delete(data, key)
+
+	err = saveData(ctx, data)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
