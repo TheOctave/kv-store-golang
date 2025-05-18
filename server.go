@@ -17,7 +17,7 @@ type ErrorMessage struct {
 	Error string `json:"error"`
 }
 
-var storagePath = "/tmp"
+var storagePath = "/tmp/kv"
 
 func main() {
 	// Get port from env variables or set to 8080
@@ -119,7 +119,7 @@ func Delete(ctx context.Context, key string) error {
 
 // JSON encodes data to json and writes to the http response
 func JSON(w http.ResponseWriter, data any) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	b, err := json.Marshal(data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
