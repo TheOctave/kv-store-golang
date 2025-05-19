@@ -53,9 +53,7 @@ func TestJSON(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	t.Parallel()
 
-	makeStorage(t)
 	defer cleanupStorage(t)
 
 	kvStore := map[string]string{
@@ -91,6 +89,35 @@ func TestGet(t *testing.T) {
 		if got != test.out {
 			t.Errorf("Got %s, expected %s", got, test.out)
 		}
+	}
+}
+
+func TestGetSetDelete(t *testing.T) {
+	makeStorage(t)
+	defer cleanupStorage(t)
+	ctx := context.Background()
+
+	key := "key"
+	value := "value"
+
+	if out, err := Get(ctx, key); err != nil || out != "" {
+		t.Fatalf("First Get returned unexpected result, out: %q, error: %s", out, err)
+	}
+
+	if err := Set(ctx, key, value); err != nil {
+		t.Fatalf("Set returned unexpected error: %s", err)
+	}
+
+	if out, err := Get(ctx, key); err != nil || out != value {
+		t.Fatalf("Second Get returned unexpected result, out: %q, error: %s", out, err)
+	}
+
+	if err := Delete(ctx, key); err != nil {
+		t.Fatalf("Delete returned unexpected error: %s", err)
+	}
+
+	if out, err := Get(ctx, key); err != nil || out != "" {
+		t.Fatalf("Third Get returned unexpected result, out: %q, error: %s", out, err)
 	}
 }
 
