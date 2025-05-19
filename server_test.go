@@ -94,18 +94,29 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func makeStorage(t *testing.T) {
+func BenchmarkGet(b *testing.B) {
+	makeStorage(b)
+	defer cleanupStorage(b)
+	// Setup omitted
+
+	b.ResetTimer()
+	for range b.N {
+		Get(context.Background(), "key1")
+	}
+}
+
+func makeStorage(tb testing.TB) {
 	err := os.Mkdir("testdata", 0755)
 	if err != nil && !os.IsExist(err) {
-		t.Fatalf("Couldn't create directory testdata: %s", err)
+		tb.Fatalf("Couldn't create directory testdata: %s", err)
 	}
 
 	storagePath = "testdata"
 }
 
-func cleanupStorage(t *testing.T) {
+func cleanupStorage(tb testing.TB) {
 	if err := os.RemoveAll(storagePath); err != nil {
-		t.Errorf("Failed to delete storage path: %s", storagePath)
+		tb.Errorf("Failed to delete storage path: %s", storagePath)
 	}
 
 	storagePath = "/tmp/kv"
