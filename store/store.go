@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net"
@@ -32,8 +34,9 @@ func NewRaftSetup(storagePath, host, raftPort, raftLeader string) (*Config, erro
 		return nil, fmt.Errorf("setting up storagedir: %w", err)
 	}
 
-	cfg.fsm = &fsm{}
-	cfg.fsm.dataFile = fmt.Sprintf("%s/data.json", storagePath)
+	cfg.fsm = &fsm{
+		dataFile: fmt.Sprintf("%s/data.json", storagePath),
+	}
 
 	stableStore, err := raftboltdb.NewBoltStore(storagePath + "/stable")
 	if err != nil {
@@ -128,4 +131,39 @@ func NewRaftSetup(storagePath, host, raftPort, raftLeader string) (*Config, erro
 	}
 
 	return cfg, nil
+}
+
+// Sets a value for a key.
+func (cfg *Config) Set(ctx context.Context, key, value string) error {
+	if cfg.raft.State() != raft.Leader {
+		return fmt.Errorf("not leader")
+	}
+
+	cmd, err := json.Marshal(Command{Action: "set", Key: key, Value: value})
+	if err != nil {
+		return fmt.Errorf("marshaling command: %w", err)
+	}
+
+	l := cfg.raft.Apply(cmd, time.Minute)
+	return l.Error()
+}
+
+// Get gets the value for a key
+func (cfg *Config) Get(ctx context.Context, key string) (string, error) {
+	return cfg.fsm.localGet(ctx, key)
+}
+
+// Delete removes a key and its value from the store.
+func (cfg *Config) Delete(ctx context.Context, key string) error {
+	if cfg.raft.State() != raft.Leader {
+		return fmt.Errorf("not leader")
+	}
+
+	cmd, err := json.Marshal(Command{Action: "delete", Key: key})
+	if err != nil {
+		return fmt.Errorf("marshaling command: %w", err)
+	}
+
+	l := cfg.raft.Apply(cmd, time.Minute)
+	return l.Error()
 }
