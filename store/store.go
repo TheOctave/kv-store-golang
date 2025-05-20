@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -166,4 +169,54 @@ func (cfg *Config) Delete(ctx context.Context, key string) error {
 
 	l := cfg.raft.Apply(cmd, time.Minute)
 	return l.Error()
+}
+
+// AddHandler is an http handler that responds to Add requests to join a raft cluster
+func (cfg *Config) AddHandler() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		jw := json.NewEncoder(w)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			jw.Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		log.Debug("got request", "body", string(body))
+
+		var s *raft.Server
+		if err := json.Unmarshal(body, &s); err != nil {
+			log.Error("could not parse json", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			jw.Encode(map[string]string{"error": err.Error()})
+			return
+		}
+		cfg.raft.AddVoter(s.ID, s.Address, 0, time.Minute)
+		jw.Encode(map[string]string{"status": "success"})
+	}
+}
+
+// Middleware passes the incoming request to the leader of the cluster
+func (cfg *Config) Middleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if cfg.raft.State() != raft.Leader {
+			ldr := cfg.raft.Leader()
+			if ldr == "" {
+				log.Error("leader address is empty")
+				h.ServeHTTP(w, r)
+				return
+			}
+
+			prxy := httputil.NewSingleHostReverseProxy(RaftAddressToHTTP(ldr))
+			prxy.ServeHTTP(w, r)
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+// RaftAddressToHTTP turns a raft ServerAddress to a parsed URL.
+func RaftAddressToHTTP(s raft.ServerAddress) *url.URL {
+	return nil
 }
