@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi"
 	hclog "github.com/hashicorp/go-hclog"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var (
@@ -50,9 +49,6 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	r.Use(func(next http.Handler) http.Handler {
-		return otelhttp.WithRouteTag("route", next)
-	})
 	r.Use(config.Middleware)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -109,8 +105,4 @@ func main() {
 	})
 
 	http.ListenAndServe(":"+port, r)
-}
-
-func handleGet(r *chi.Mux, pattern string, handler func(http.ResponseWriter, *http.Request)) {
-	 r.Handle(pattern, otelhttp.WithRouteTag(pattern, http.HandlerFunc(handler)))
 }
