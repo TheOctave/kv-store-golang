@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"key-value-store/observability/otellib"
 	"math/rand"
 	"net"
 	"net/http"
@@ -174,6 +175,10 @@ func (cfg *Config) Delete(ctx context.Context, key string) error {
 // AddHandler is an http handler that responds to Add requests to join a raft cluster
 func (cfg *Config) AddHandler() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		_, span := otellib.Tracer.Start(ctx, "POST /add/{key}")
+		defer span.End()
+
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		jw := json.NewEncoder(w)
 		body, err := io.ReadAll(r.Body)

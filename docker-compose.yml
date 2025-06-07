@@ -5,11 +5,16 @@ services:
     environment:
       RAFT_LEADER: ""
       RAFT_ADDRESS: "kv_0"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_SERVICE_NAME: "raft-server"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - "8080:8080"
       - "8081:8081"
     networks:
       - kv_network
+      - observability_network
 
   kv_2:
     build:
@@ -17,11 +22,16 @@ services:
     environment:
       RAFT_LEADER: "http://kv_0:8080"
       RAFT_ADDRESS: "kv_2"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_SERVICE_NAME: "raft-server"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - "8082:8080"
       - "8083:8081"
     networks:
       - kv_network
+      - observability_network
 
   kv_4:
     build:
@@ -29,12 +39,37 @@ services:
     environment:
       RAFT_LEADER: "http://kv_0:8080"
       RAFT_ADDRESS: "kv_4"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_SERVICE_NAME: raft-server
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318"
     ports:
       - "8084:8080"
       - "8085:8081"
     networks:
       - kv_network
+      - observability_network
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    pull_policy: always
+    deploy:
+      resources:
+        limits:
+          memory: "128M"
+          cpus: .5
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      OTEL_TRACES_EXPORTER: "otlp"
+    ports:
+      - 16686:16686 # Jaeger UI
+      - 4318:4318   # OTLP HTTP port
+    networks:
+      - observability_network
+
 
 networks:
   kv_network:
+    driver: bridge
+  observability_network:
     driver: bridge
